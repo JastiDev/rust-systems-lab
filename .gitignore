@@ -1,0 +1,16 @@
+# Rust
+/target/
+
+# Environment & secrets
+.env
+/keys/
+/wallets/
+/secrets/
+
+# IDE & editor
+.vscode/
+.idea/
+
+# Logs & debug
+*.log
+*.pdb

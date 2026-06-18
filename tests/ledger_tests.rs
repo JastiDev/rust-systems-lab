@@ -26,10 +26,12 @@ fn creates_account() {
 #[test]
 fn rejects_duplicate_account() {
     let (mut ledger, id0, _) = ledger_setup();
+    let original_ledger = ledger.clone();
     assert_eq!(
         ledger.create_account(&id0, 100),
         Err(LedgerError::AccountAlreadyExists(id0)),
     );
+    assert_eq!(original_ledger, ledger);
 }
 
 // helper to avoid duplication
@@ -64,6 +66,8 @@ fn applies_valid_transfer() {
 #[test]
 fn rejects_unknown_sender() {
     let (mut ledger, id0, id1) = ledger_setup();
+    let original_ledger = ledger.clone();
+
     let id3 = String::from("James");
     let transfer = Transfer {
         from: id3.clone(),
@@ -76,12 +80,15 @@ fn rejects_unknown_sender() {
         Err(LedgerError::SenderNotFound(id3))
     );
 
+    assert_eq!(original_ledger, ledger);
     preserves_balance_after_error(ledger, id0, id1);
 }
 
 #[test]
 fn rejects_unknown_receiver() {
     let (mut ledger, id0, id1) = ledger_setup();
+    let original_ledger = ledger.clone();
+
     let id3 = String::from("James");
     let transfer = Transfer {
         from: id0.clone(),
@@ -94,12 +101,15 @@ fn rejects_unknown_receiver() {
         Err(LedgerError::ReceiverNotFound(id3))
     );
 
+    assert_eq!(original_ledger, ledger);
     preserves_balance_after_error(ledger, id0, id1);
 }
 
 #[test]
 fn rejects_insufficient_balance() {
     let (mut ledger, id0, id1) = ledger_setup();
+    let original_ledger = ledger.clone();
+
     let transfer = Transfer {
         from: id0.clone(),
         to: id1.clone(),
@@ -114,12 +124,15 @@ fn rejects_insufficient_balance() {
         })
     );
 
+    assert_eq!(original_ledger, ledger);
     preserves_balance_after_error(ledger, id0, id1);
 }
 
 #[test]
 fn rejects_wrong_nonce() {
     let (mut ledger, id0, id1) = ledger_setup();
+    let original_ledger = ledger.clone();
+
     let transfer = Transfer {
         from: id0.clone(),
         to: id1.clone(),
@@ -134,12 +147,14 @@ fn rejects_wrong_nonce() {
         })
     );
 
+    assert_eq!(original_ledger, ledger);
     preserves_balance_after_error(ledger, id0, id1);
 }
 
 #[test]
 fn preserves_total_supply() {
     let (mut ledger, id0, id1) = ledger_setup();
+
     let total_original = ledger.total_supply();
     assert_eq!(total_original, 200);
 

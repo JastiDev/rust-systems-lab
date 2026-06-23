@@ -1,4 +1,9 @@
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TransactionError {
+    InvalidEncoding,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LedgerError {
     AccountAlreadyExists(String),
     ZeroAmount,

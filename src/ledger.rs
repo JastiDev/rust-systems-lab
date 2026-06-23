@@ -1,5 +1,6 @@
 use crate::account::Account;
 use crate::error::{LedgerError, TransferValidationError};
+use crate::transaction::Transaction;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -129,6 +130,16 @@ impl Ledger {
 
     pub fn apply_transfer(&mut self, transfer: Transfer) -> Result<(), LedgerError> {
         self.apply(transfer)
+    }
+
+    pub fn apply_transaction(&mut self, transaction: Transaction) -> Result<(), LedgerError> {
+        let transfer = Transfer {
+            from: transaction.sender,
+            to: transaction.receiver,
+            amount: transaction.amount,
+            nonce: transaction.nonce,
+        };
+        self.apply_transfer(transfer)
     }
 
     pub fn total_supply(&self) -> u64 {

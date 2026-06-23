@@ -1,5 +1,6 @@
+use crate::error::TransactionError;
 use bincode::config;
-use bincode::serde::encode_to_vec;
+use bincode::serde::{decode_from_slice, encode_to_vec};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -53,5 +54,12 @@ impl Transaction {
     pub fn id(&self) -> TransactionId {
         let digest = Sha256::digest(self.canonical_bytes());
         TransactionId(digest.into())
+    }
+
+    pub fn from_canonical_bytes(bytes: &[u8]) -> Result<Self, TransactionError> {
+        let config = config::standard();
+        decode_from_slice(bytes, config)
+            .map(|(transaction, _)| transaction)
+            .map_err(|_| TransactionError::InvalidEncoding)
     }
 }

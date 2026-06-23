@@ -15,16 +15,16 @@ pub enum LedgerError {
     BalanceOverflow,
 }
 
-pub enum TransferValidationError {
+pub enum TransactionValidationError {
     ZeroAmount,
     SelfTransfer,
 }
 
-impl From<TransferValidationError> for LedgerError {
-    fn from(value: TransferValidationError) -> Self {
+impl From<TransactionValidationError> for LedgerError {
+    fn from(value: TransactionValidationError) -> Self {
         match value {
-            TransferValidationError::ZeroAmount => LedgerError::ZeroAmount,
-            TransferValidationError::SelfTransfer => LedgerError::SelfTransfer,
+            TransactionValidationError::ZeroAmount => LedgerError::ZeroAmount,
+            TransactionValidationError::SelfTransfer => LedgerError::SelfTransfer,
         }
     }
 }

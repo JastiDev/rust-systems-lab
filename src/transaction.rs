@@ -1,4 +1,5 @@
 use crate::error::TransactionError;
+use crate::TransactionValidationError;
 use bincode::config;
 use bincode::serde::{decode_from_slice, encode_to_vec};
 use serde::{Deserialize, Serialize};
@@ -29,6 +30,25 @@ pub struct Transaction {
     pub receiver: String,
     pub amount: u64,
     pub nonce: u64,
+}
+
+pub trait Validate {
+    type Error;
+    fn validate(&self) -> Result<(), Self::Error>;
+}
+
+impl Validate for Transaction {
+    type Error = TransactionValidationError;
+
+    fn validate(&self) -> Result<(), TransactionValidationError> {
+        if self.amount == 0 {
+            return Err(TransactionValidationError::ZeroAmount);
+        }
+        if self.sender == self.receiver {
+            return Err(TransactionValidationError::SelfTransfer);
+        }
+        Ok(())
+    }
 }
 
 impl Transaction {

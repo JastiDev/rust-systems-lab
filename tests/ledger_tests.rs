@@ -1,9 +1,6 @@
-use rust_systems_lab::Ledger;
-use rust_systems_lab::LedgerError;
-use rust_systems_lab::StateTransition;
-use rust_systems_lab::Transfer;
-use rust_systems_lab::TransferValidationError;
-use rust_systems_lab::Validate;
+use rust_systems_lab::{
+    Ledger, LedgerError, StateTransition, Transaction, TransactionValidationError, Validate,
+};
 
 // helper function to avoid duplicated codes
 
@@ -50,13 +47,13 @@ fn preserves_balance_after_error(ledger: Ledger, id0: impl Into<String>, id1: im
 #[test]
 fn applies_valid_transfer() {
     let (mut ledger, id0, id1) = ledger_setup();
-    let transfer = Transfer {
-        from: id0.clone(),
-        to: id1.clone(),
+    let transaction = Transaction {
+        sender: id0.clone(),
+        receiver: id1.clone(),
         amount: 10,
         nonce: 0,
     };
-    assert_eq!(ledger.apply_transfer(transfer), Ok(()));
+    assert_eq!(ledger.apply_transaction(transaction), Ok(()));
 
     let alice = ledger.account(id0).expect("Alice account should exist.");
     let bob = ledger.account(id1).expect("Bob account should exist.");
@@ -68,57 +65,57 @@ fn applies_valid_transfer() {
 
 #[test]
 fn rejects_zero_amount_during_validation() {
-    let transfer = Transfer {
-        from: "alice".to_string(),
-        to: "bob".to_string(),
+    let transaction = Transaction {
+        sender: "alice".to_string(),
+        receiver: "bob".to_string(),
         amount: 0,
         nonce: 0,
     };
 
     assert!(matches!(
-        transfer.validate(),
-        Err(TransferValidationError::ZeroAmount),
+        transaction.validate(),
+        Err(TransactionValidationError::ZeroAmount),
     ));
 }
 
 #[test]
 fn rejects_same_sender_and_receiver_during_validation() {
-    let transfer = Transfer {
-        from: "alice".to_string(),
-        to: "alice".to_string(),
+    let transaction = Transaction {
+        sender: "alice".to_string(),
+        receiver: "alice".to_string(),
         amount: 10,
         nonce: 0,
     };
 
     assert!(matches!(
-        transfer.validate(),
-        Err(TransferValidationError::SelfTransfer),
+        transaction.validate(),
+        Err(TransactionValidationError::SelfTransfer),
     ));
 }
 
 #[test]
 fn accepts_structurally_valid_transfer() {
-    let transfer = Transfer {
-        from: "alice".to_string(),
-        to: "bob".to_string(),
+    let transaction = Transaction {
+        sender: "alice".to_string(),
+        receiver: "bob".to_string(),
         amount: 10,
         nonce: 0,
     };
 
-    assert!(transfer.validate().is_ok());
+    assert!(transaction.validate().is_ok());
 }
 
 #[test]
 fn applies_transaction_through_state_transition_trait() {
     let (mut ledger, id0, id1) = ledger_setup();
-    let transfer = Transfer {
-        from: id0.clone(),
-        to: id1.clone(),
+    let transaction = Transaction {
+        sender: id0.clone(),
+        receiver: id1.clone(),
         amount: 10,
         nonce: 0,
     };
 
-    assert_eq!(StateTransition::apply(&mut ledger, transfer), Ok(()));
+    assert_eq!(StateTransition::apply(&mut ledger, transaction), Ok(()));
 
     let alice = ledger.account(&id0).expect("Alice account should exist.");
     let bob = ledger.account(&id1).expect("Bob account should exist.");
@@ -133,15 +130,15 @@ fn failed_state_transition_does_not_mutate_ledger() {
     let (mut ledger, id0, id1) = ledger_setup();
     let original_ledger = ledger.clone();
 
-    let transfer = Transfer {
-        from: id0,
-        to: id1,
+    let transaction = Transaction {
+        sender: id0,
+        receiver: id1,
         amount: 500,
         nonce: 0,
     };
 
     assert_eq!(
-        ledger.apply(transfer),
+        ledger.apply(transaction),
         Err(LedgerError::InsufficientBalance {
             available: 100,
             requested: 500,
@@ -155,14 +152,14 @@ fn rejects_unknown_sender() {
     let (mut ledger, id0, id1) = ledger_setup();
 
     let id3 = String::from("James");
-    let transfer = Transfer {
-        from: id3.clone(),
-        to: id1.clone(),
+    let transaction = Transaction {
+        sender: id3.clone(),
+        receiver: id1.clone(),
         amount: 10,
         nonce: 0,
     };
     assert_eq!(
-        ledger.apply_transfer(transfer),
+        ledger.apply_transaction(transaction),
         Err(LedgerError::SenderNotFound(id3))
     );
 
@@ -174,14 +171,14 @@ fn rejects_unknown_receiver() {
     let (mut ledger, id0, id1) = ledger_setup();
 
     let id3 = String::from("James");
-    let transfer = Transfer {
-        from: id0.clone(),
-        to: id3.clone(),
+    let transaction = Transaction {
+        sender: id0.clone(),
+        receiver: id3.clone(),
         amount: 10,
         nonce: 0,
     };
     assert_eq!(
-        ledger.apply_transfer(transfer),
+        ledger.apply_transaction(transaction),
         Err(LedgerError::ReceiverNotFound(id3))
     );
 
@@ -192,14 +189,14 @@ fn rejects_unknown_receiver() {
 fn rejects_insufficient_balance() {
     let (mut ledger, id0, id1) = ledger_setup();
 
-    let transfer = Transfer {
-        from: id0.clone(),
-        to: id1.clone(),
+    let transaction = Transaction {
+        sender: id0.clone(),
+        receiver: id1.clone(),
         amount: 500,
         nonce: 0,
     };
     assert_eq!(
-        ledger.apply_transfer(transfer),
+        ledger.apply_transaction(transaction),
         Err(LedgerError::InsufficientBalance {
             available: 100,
             requested: 500
@@ -213,14 +210,14 @@ fn rejects_insufficient_balance() {
 fn rejects_wrong_nonce() {
     let (mut ledger, id0, id1) = ledger_setup();
 
-    let transfer = Transfer {
-        from: id0.clone(),
-        to: id1.clone(),
+    let transaction = Transaction {
+        sender: id0.clone(),
+        receiver: id1.clone(),
         amount: 10,
         nonce: 110,
     };
     assert_eq!(
-        ledger.apply_transfer(transfer),
+        ledger.apply_transaction(transaction),
         Err(LedgerError::IncorrectNonce {
             expected: 0,
             received: 110,
@@ -237,13 +234,13 @@ fn preserves_total_supply() {
     let total_original = ledger.total_supply();
     assert_eq!(total_original, 200);
 
-    let transfer = Transfer {
-        from: id0.clone(),
-        to: id1.clone(),
+    let transaction = Transaction {
+        sender: id0.clone(),
+        receiver: id1.clone(),
         amount: 10,
         nonce: 0,
     };
-    assert_eq!(ledger.apply_transfer(transfer), Ok(()));
+    assert_eq!(ledger.apply_transaction(transaction), Ok(()));
 
     let total_later = ledger.total_supply();
     assert_eq!(total_later, 200);

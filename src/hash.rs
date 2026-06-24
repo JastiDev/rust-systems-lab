@@ -24,7 +24,7 @@ impl std::fmt::Display for HashedId {
 }
 
 pub trait HashFn {
-    fn id(&self) -> HashedId;
+    fn hash_id(&self) -> HashedId;
     fn canonical_bytes(&self) -> Vec<u8>;
     fn from_canonical_bytes(bytes: &[u8]) -> Result<Self, HashError>
     where
@@ -35,7 +35,7 @@ impl<T> HashFn for T
 where
     T: Serialize + for<'de> Deserialize<'de>,
 {
-    fn id(&self) -> HashedId {
+    fn hash_id(&self) -> HashedId {
         let digest = Sha256::digest(self.canonical_bytes());
         HashedId(digest.into())
     }

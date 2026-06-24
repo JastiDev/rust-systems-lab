@@ -27,7 +27,7 @@ impl Block {
     pub fn transaction_commitment(transactions: &[Transaction]) -> [u8; 32] {
         let mut hasher = Sha256::new();
         for transaction in transactions {
-            hasher.update(transaction.id().as_bytes());
+            hasher.update(transaction.hash_id().as_bytes());
         }
         hasher.finalize().into()
     }

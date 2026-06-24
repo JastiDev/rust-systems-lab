@@ -26,7 +26,7 @@ fn equal_transactions_produce_equal_ids() {
     let left = sample_transaction();
     let right = sample_transaction();
 
-    assert_eq!(left.id(), right.id());
+    assert_eq!(left.hash_id(), right.hash_id());
 }
 
 #[test]
@@ -34,7 +34,7 @@ fn changing_sender_changes_transaction_id() {
     let base = sample_transaction();
     let changed = Transaction::new("carol", "bob", 10, 0);
 
-    assert_ne!(base.id(), changed.id());
+    assert_ne!(base.hash_id(), changed.hash_id());
 }
 
 #[test]
@@ -42,7 +42,7 @@ fn changing_receiver_changes_transaction_id() {
     let base = sample_transaction();
     let changed = Transaction::new("alice", "carol", 10, 0);
 
-    assert_ne!(base.id(), changed.id());
+    assert_ne!(base.hash_id(), changed.hash_id());
 }
 
 #[test]
@@ -50,7 +50,7 @@ fn changing_amount_changes_transaction_id() {
     let base = sample_transaction();
     let changed = Transaction::new("alice", "bob", 20, 0);
 
-    assert_ne!(base.id(), changed.id());
+    assert_ne!(base.hash_id(), changed.hash_id());
 }
 
 #[test]
@@ -58,7 +58,7 @@ fn changing_nonce_changes_transaction_id() {
     let base = sample_transaction();
     let changed = Transaction::new("alice", "bob", 10, 1);
 
-    assert_ne!(base.id(), changed.id());
+    assert_ne!(base.hash_id(), changed.hash_id());
 }
 
 #[test]
@@ -80,14 +80,14 @@ fn deserialization_recreates_transaction() {
 
 #[test]
 fn transaction_id_display_has_64_hex_chars() {
-    let id = sample_transaction().id();
+    let id = sample_transaction().hash_id();
 
     assert_eq!(format!("{id}").len(), 64);
 }
 
 #[test]
 fn transaction_id_display_contains_only_hex_chars() {
-    let id = sample_transaction().id();
+    let id = sample_transaction().hash_id();
 
     assert!(format!("{id}").chars().all(|c| c.is_ascii_hexdigit()));
 }

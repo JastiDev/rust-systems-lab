@@ -8,7 +8,7 @@ mod traits;
 mod transaction;
 pub use block::{Block, BlockHeader};
 pub use blockchain::Blockchain;
-pub use error::{BlockError, HashError, LedgerError, TransactionValidationError};
+pub use error::{BlockError, ChainError, HashError, LedgerError, TransactionValidationError};
 pub use hash::HashedId;
 pub use ledger::Ledger;
 pub use traits::StateTransition;

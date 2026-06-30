@@ -34,3 +34,15 @@ impl From<TransactionValidationError> for LedgerError {
         }
     }
 }
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ChainError {
+    UnexpectedHeight { expected: u64, received: u64 },
+    InvalidPreviousHash,
+    InvalidTransactionCommitment,
+    DuplicateTransactionId(crate::hash::HashedId),
+    TransactionFailed(LedgerError),
+    InvalidStateCommitment,
+    StateCommitmentFailed(LedgerError),
+    TotalSupplyMismatch { expected: u64, actual: u64 },
+}

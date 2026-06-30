@@ -1,5 +1,6 @@
 use crate::account::Account;
 use crate::error::LedgerError;
+use crate::hash::{canonical_encode, hash_canonical_bytes};
 use crate::transaction::Transaction;
 use std::collections::HashMap;
 
@@ -47,5 +48,17 @@ impl Ledger {
 
     pub fn total_supply(&self) -> u64 {
         self.accounts.values().map(|acc| acc.balance).sum()
+    }
+
+    pub fn state_commitment(&self) -> Result<[u8; 32], LedgerError> {
+        let mut sorted_accounts: Vec<(String, Account)> = self
+            .accounts
+            .iter()
+            .map(|(id, account)| (id.clone(), account.clone()))
+            .collect();
+        sorted_accounts.sort_by(|(left, _), (right, _)| left.cmp(right));
+
+        let bytes = canonical_encode(&sorted_accounts);
+        Ok(*hash_canonical_bytes(&bytes).as_bytes())
     }
 }

@@ -46,7 +46,9 @@ impl Blockchain {
         // 4. No duplicate transaction IDs inside the block
         ensure_unique_transaction_ids(&block.transactions)?;
 
-        // 5. Transactions execute successfully in order
+        // 5. Atomic execution: apply every transaction to a temporary ledger.
+        // If any transaction fails, the whole block is rejected and the chain
+        // ledger is left unchanged.
         let supply_before = self.ledger.total_supply();
         let mut ledger = self.ledger.clone();
         for transaction in &block.transactions {

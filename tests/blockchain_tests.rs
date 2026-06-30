@@ -74,6 +74,143 @@ fn chain_with_accounts_and_genesis() -> Blockchain {
     chain
 }
 
+fn uncommitted_block(chain: &Blockchain, transactions: Vec<Transaction>) -> Block {
+    Block {
+        header: BlockHeader {
+            height: chain.blocks.len() as u64,
+            previous_hash: *chain.blocks.last().unwrap().hash().as_bytes(),
+            transaction_commitment: Block::transaction_commitment(&transactions),
+            state_commitment: [0u8; 32],
+        },
+        transactions,
+    }
+}
+
+#[test]
+fn failed_block_does_not_change_ledger() {
+    let mut chain = chain_with_accounts_and_genesis();
+    let ledger_before = chain.ledger.clone();
+    let state_commitment_before = chain
+        .ledger
+        .state_commitment()
+        .expect("state commitment");
+
+    let block = uncommitted_block(
+        &chain,
+        vec![Transaction::new("alice", "bob", 500, 0)],
+    );
+    assert!(chain.append_block(block).is_err());
+
+    assert_eq!(chain.ledger, ledger_before);
+    assert_eq!(
+        chain.ledger.state_commitment().expect("state commitment"),
+        state_commitment_before,
+    );
+    assert_eq!(chain.ledger.total_supply(), 200);
+}
+
+#[test]
+fn failed_block_does_not_change_block_count() {
+    let mut chain = chain_with_accounts_and_genesis();
+    let block_count_before = chain.blocks.len();
+
+    let block = uncommitted_block(
+        &chain,
+        vec![Transaction::new("alice", "bob", 500, 0)],
+    );
+    assert!(chain.append_block(block).is_err());
+
+    assert_eq!(chain.blocks.len(), block_count_before);
+}
+
+#[test]
+fn valid_prefix_invalid_second_transaction_discards_entire_block() {
+    let mut chain = chain_with_accounts_and_genesis();
+    let original = chain.clone();
+
+    let transactions = vec![
+        Transaction::new("alice", "bob", 10, 0),
+        Transaction::new("alice", "bob", 500, 1),
+    ];
+    let block = uncommitted_block(&chain, transactions);
+
+    assert_eq!(
+        chain.append_block(block),
+        Err(ChainError::TransactionFailed(
+            LedgerError::InsufficientBalance {
+                available: 90,
+                requested: 500,
+            },
+        )),
+    );
+    assert_eq!(chain, original);
+
+    let alice = chain.ledger.account("alice").expect("alice");
+    let bob = chain.ledger.account("bob").expect("bob");
+    assert_eq!(alice.balance, 100);
+    assert_eq!(bob.balance, 100);
+    assert_eq!(alice.nonce, 0);
+}
+
+#[test]
+fn wrong_nonce_midway_discards_entire_block() {
+    let mut chain = chain_with_accounts_and_genesis();
+    let original = chain.clone();
+
+    let transactions = vec![
+        Transaction::new("alice", "bob", 10, 0),
+        Transaction::new("alice", "bob", 10, 2),
+    ];
+    let block = uncommitted_block(&chain, transactions);
+
+    assert_eq!(
+        chain.append_block(block),
+        Err(ChainError::TransactionFailed(
+            LedgerError::IncorrectNonce {
+                expected: 1,
+                received: 2,
+            },
+        )),
+    );
+    assert_eq!(chain, original);
+
+    let alice = chain.ledger.account("alice").expect("alice");
+    let bob = chain.ledger.account("bob").expect("bob");
+    assert_eq!(alice.balance, 100);
+    assert_eq!(bob.balance, 100);
+    assert_eq!(alice.nonce, 0);
+}
+
+#[test]
+fn insufficient_funds_midway_discards_entire_block() {
+    let mut chain = chain_with_accounts_and_genesis();
+    let original = chain.clone();
+
+    let transactions = vec![
+        Transaction::new("alice", "bob", 10, 0),
+        Transaction::new("alice", "bob", 10, 1),
+        Transaction::new("alice", "bob", 500, 2),
+    ];
+    let block = uncommitted_block(&chain, transactions);
+
+    assert_eq!(
+        chain.append_block(block),
+        Err(ChainError::TransactionFailed(
+            LedgerError::InsufficientBalance {
+                available: 80,
+                requested: 500,
+            },
+        )),
+    );
+    assert_eq!(chain, original);
+
+    let alice = chain.ledger.account("alice").expect("alice");
+    let bob = chain.ledger.account("bob").expect("bob");
+    assert_eq!(alice.balance, 100);
+    assert_eq!(bob.balance, 100);
+    assert_eq!(alice.nonce, 0);
+}
+
 #[test]
 fn rejects_wrong_block_height() {
     let mut chain = Blockchain::new();
@@ -189,6 +326,39 @@ fn rejects_duplicate_transaction_ids_inside_block() {
     assert_eq!(
         chain.append_block(block),
         Err(ChainError::DuplicateTransactionId(duplicate_id)),
+    );
+    assert_eq!(chain, original);
+}
+
+#[test]
+fn rejects_block_when_later_transaction_fails() {
+    let mut chain = chain_with_accounts_and_genesis();
+    let original = chain.clone();
+
+    let mut transactions = Vec::new();
+    for nonce in 0..9 {
+        transactions.push(Transaction::new("alice", "bob", 10, nonce));
+    }
+    transactions.push(Transaction::new("alice", "bob", 500, 9));
+
+    let block = Block {
+        header: BlockHeader {
+            height: 1,
+            previous_hash: *chain.blocks[0].hash().as_bytes(),
+            transaction_commitment: Block::transaction_commitment(&transactions),
+            state_commitment: [0u8; 32],
+        },
+        transactions,
+    };
+
+    assert_eq!(
+        chain.append_block(block),
+        Err(ChainError::TransactionFailed(
+            LedgerError::InsufficientBalance {
+                available: 10,
+                requested: 500,
+            },
+        )),
     );
     assert_eq!(chain, original);
 }

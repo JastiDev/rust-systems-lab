@@ -1,6 +1,4 @@
-use rust_systems_lab::{
-    Ledger, LedgerError, StateTransition, Transaction, TransactionValidationError, Validate,
-};
+use rust_systems_lab::{Ledger, LedgerError, Transaction, TransactionValidationError, Validate};
 
 // helper function to avoid duplicated codes
 
@@ -106,27 +104,7 @@ fn accepts_structurally_valid_transfer() {
 }
 
 #[test]
-fn applies_transaction_through_state_transition_trait() {
-    let (mut ledger, id0, id1) = ledger_setup();
-    let transaction = Transaction {
-        sender: id0.clone(),
-        receiver: id1.clone(),
-        amount: 10,
-        nonce: 0,
-    };
-
-    assert_eq!(StateTransition::apply(&mut ledger, transaction), Ok(()));
-
-    let alice = ledger.account(&id0).expect("Alice account should exist.");
-    let bob = ledger.account(&id1).expect("Bob account should exist.");
-
-    assert_eq!(alice.balance, 90);
-    assert_eq!(bob.balance, 110);
-    assert_eq!(alice.nonce, 1);
-}
-
-#[test]
-fn failed_state_transition_does_not_mutate_ledger() {
+fn failed_apply_transaction_does_not_mutate_ledger() {
     let (mut ledger, id0, id1) = ledger_setup();
     let original_ledger = ledger.clone();
 
@@ -138,7 +116,7 @@ fn failed_state_transition_does_not_mutate_ledger() {
     };
 
     assert_eq!(
-        ledger.apply(transaction),
+        ledger.apply_transaction(transaction),
         Err(LedgerError::InsufficientBalance {
             available: 100,
             requested: 500,

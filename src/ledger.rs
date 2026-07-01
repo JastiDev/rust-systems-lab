@@ -1,7 +1,7 @@
 use crate::account::Account;
 use crate::error::LedgerError;
 use crate::hash::{canonical_encode, hash_canonical_bytes};
-use crate::transaction::Transaction;
+use crate::transaction::{Transaction, Validate};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -43,7 +43,56 @@ impl Ledger {
     }
 
     pub fn apply_transaction(&mut self, transaction: Transaction) -> Result<(), LedgerError> {
-        crate::traits::StateTransition::apply(self, transaction)
+        // 1. Validate (immutable borrows die at end of this block)
+        {
+            // check if `amount is zero` or `sender and receiver are the same`
+            transaction.validate()?;
+
+            // sender does not exist
+            let Some(sender) = self.account(transaction.sender.clone()) else {
+                return Err(LedgerError::SenderNotFound(transaction.sender.clone()));
+            };
+
+            // receiver does not exist
+            let Some(receiver) = self.account(transaction.receiver.clone()) else {
+                return Err(LedgerError::ReceiverNotFound(transaction.receiver.clone()));
+            };
+
+            // transaction nonce does not match sender nonce
+            if sender.nonce != transaction.nonce {
+                return Err(LedgerError::IncorrectNonce {
+                    expected: sender.nonce,
+                    received: transaction.nonce,
+                });
+            }
+
+            // sender does not have enough balance
+            if sender.balance < transaction.amount {
+                return Err(LedgerError::InsufficientBalance {
+                    available: sender.balance,
+                    requested: transaction.amount,
+                });
+            }
+
+            // receiver balance would overflow
+            if receiver.balance > u64::MAX - transaction.amount {
+                return Err(LedgerError::BalanceOverflow);
+            }
+        } // sender & receiver borrows end here
+
+        // 2. Mutate — one account at a time
+        let sender = self
+            .account_mut(&transaction.sender)
+            .ok_or_else(|| LedgerError::SenderNotFound(transaction.sender.clone()))?;
+        sender.balance -= transaction.amount;
+        sender.nonce += 1;
+
+        let receiver = self
+            .account_mut(&transaction.receiver)
+            .ok_or_else(|| LedgerError::ReceiverNotFound(transaction.receiver.clone()))?;
+        receiver.balance += transaction.amount;
+
+        Ok(())
     }
 
     pub fn total_supply(&self) -> u64 {

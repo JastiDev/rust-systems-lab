@@ -28,8 +28,7 @@ Transaction  →  Ledger  →  Block  →  Blockchain
 |--------|------|
 | `src/account.rs` | Account struct (`balance`, `nonce`) |
 | `src/transaction.rs` | Transfer payload, structural validation, canonical encoding, content-derived ID |
-| `src/ledger.rs` | Account map, `create_account`, `apply_transaction`, `state_commitment` |
-| `src/traits/state_transition.rs` | `StateTransition` trait; ledger apply logic (validate-then-mutate) |
+| `src/ledger.rs` | Account map, `create_account`, `apply_transaction` (validate-then-mutate), `state_commitment` |
 | `src/block.rs` | `Block`, `BlockHeader`, transaction commitment, block hash |
 | `src/blockchain.rs` | Chain storage and `append_block` (the only way to advance state) |
 | `src/hash.rs` | Canonical bincode encoding and SHA-256 hashing |
@@ -71,7 +70,7 @@ Before touching the ledger, `Validate::validate` checks:
 
 ### 2. Ledger validation
 
-`Ledger::apply_transaction` (via `StateTransition<Transaction>`) checks:
+`Ledger::apply_transaction` checks:
 
 - Sender and receiver accounts exist
 - `transaction.nonce == sender.nonce`

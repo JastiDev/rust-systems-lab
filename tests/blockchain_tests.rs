@@ -90,15 +90,9 @@ fn uncommitted_block(chain: &Blockchain, transactions: Vec<Transaction>) -> Bloc
 fn failed_block_does_not_change_ledger() {
     let mut chain = chain_with_accounts_and_genesis();
     let ledger_before = chain.ledger.clone();
-    let state_commitment_before = chain
-        .ledger
-        .state_commitment()
-        .expect("state commitment");
+    let state_commitment_before = chain.ledger.state_commitment().expect("state commitment");
 
-    let block = uncommitted_block(
-        &chain,
-        vec![Transaction::new("alice", "bob", 500, 0)],
-    );
+    let block = uncommitted_block(&chain, vec![Transaction::new("alice", "bob", 500, 0)]);
     assert!(chain.append_block(block).is_err());
 
     assert_eq!(chain.ledger, ledger_before);
@@ -114,10 +108,7 @@ fn failed_block_does_not_change_block_count() {
     let mut chain = chain_with_accounts_and_genesis();
     let block_count_before = chain.blocks.len();
 
-    let block = uncommitted_block(
-        &chain,
-        vec![Transaction::new("alice", "bob", 500, 0)],
-    );
+    let block = uncommitted_block(&chain, vec![Transaction::new("alice", "bob", 500, 0)]);
     assert!(chain.append_block(block).is_err());
 
     assert_eq!(chain.blocks.len(), block_count_before);
@@ -165,12 +156,10 @@ fn wrong_nonce_midway_discards_entire_block() {
 
     assert_eq!(
         chain.append_block(block),
-        Err(ChainError::TransactionFailed(
-            LedgerError::IncorrectNonce {
-                expected: 1,
-                received: 2,
-            },
-        )),
+        Err(ChainError::TransactionFailed(LedgerError::IncorrectNonce {
+            expected: 1,
+            received: 2,
+        },)),
     );
     assert_eq!(chain, original);
 
